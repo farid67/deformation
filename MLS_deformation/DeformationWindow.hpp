@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "DeformationClean.hpp"
+#include "DeformationFast.hpp"
 #include "ColorMap.hpp"
 
 #include <SOIL.h>
@@ -44,6 +45,15 @@ private:
 
     ColorMap* m_colorMap;
     std::vector <DeformationClean> m_DeformationSet;
+    std::vector <glm::vec2> m_startMarkers;
+
+    DeformationClean m_deformation;
+
+    DeformationFast* m_defoFast;
+
+    std::vector<glm::vec2> m_gridPoints; // grid Points
+
+    unsigned char* m_image;
 };
 
 //---------------------------------------------------------------

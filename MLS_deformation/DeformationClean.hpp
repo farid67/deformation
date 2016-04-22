@@ -1,10 +1,14 @@
 #ifndef DEFORMATIONCLEAN_HPP
 #define DEFORMATIONCLEAN_HPP
 
+#include <ctime>
+#include <cstdio>
+
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <cassert>
+#include <thread>
 #include <glm/glm.hpp>
 #include <eigen3/unsupported/Eigen/MatrixFunctions>
 
@@ -15,12 +19,18 @@ public:
     DeformationClean();
     DeformationClean(const std::vector<glm::vec2>& startSet, const std::vector<glm::vec2>& endSet);
 
+    DeformationClean(const DeformationClean& );
     virtual ~DeformationClean();
 
     // set/get
 
-//    std::vector<glm::vec2>& startMarkers();
-//    std::vector<glm::vec2> startMarkers() const;
+    std::vector<glm::vec2>& startMarkers();
+    std::vector<glm::vec2> startMarkers() const;
+
+    std::vector<glm::vec2>& endMarkers();
+    std::vector<glm::vec2> endMarkers() const;
+
+
 
     glm::vec2 AffineDeformation(const glm::vec2&, bool print);
     glm::vec2 SimilarityDeformation(const glm::vec2&, bool print);
@@ -35,7 +45,6 @@ private:
     // Same for all glm::vec2s
     std::vector<glm::vec2> m_startMarkers;
     std::vector<glm::vec2> m_endMarkers;
-
 
     // ensemble de glm::vec2s = différence de chaque glm::vec2 avec le centroïd
     std::vector<glm::vec2> m_diffStartCentroid;
@@ -52,6 +61,7 @@ private:
     // le centroid est calculé relativement à un glm::vec2 de base
     glm::vec2 m_startCentroid;
     glm::vec2 m_endCentroid;
+
 
     // compute functions
     void computeCentroids(const glm::vec2&);
@@ -120,6 +130,7 @@ inline std::vector<DeformationClean> getDeformationSetFromFile(std::string fileN
 
     std::vector < DeformationClean > defSets ;
     glm::vec2 a,b;
+    float distance_th = 200.;
     std::vector<glm::vec2> vecA,vecB;
     while (getline(file,line))
     {
@@ -142,19 +153,50 @@ inline std::vector<DeformationClean> getDeformationSetFromFile(std::string fileN
             b[0] = std::stoi(current_int_string);
             std::getline(lineStream,current_int_string,' ');
             b[1] = std::stoi(current_int_string);
-            // PUSH ELEMENTS iN ARRAYs
-            vecA.push_back(a);
-            vecB.push_back(b);
+            if (glm::distance(a,b)>distance_th)
+                std::cout << "distance seems to be too high between (" << a[0] << "," << a[1] << ") and (" << b[0] << "," << b[1] << ")" << std::endl;
+            else
+            {
+                // PUSH ELEMENTS iN ARRAYs
+                vecA.push_back(a);
+                vecB.push_back(b);
+            }
         }
         // GET NEWLINE
         getline(file,line);
-
-        defSets.push_back(DeformationClean(vecA,vecB));
+        if (vecA.size() < 5 )
+            std::cout << "Can not add this set, not enough points" << std::endl;
+        else
+            defSets.push_back(DeformationClean(vecA,vecB));
     }
 
     file.close();
     return defSets;
 
+}
+
+//---------------------------------------------------------------
+
+inline std::vector<glm::vec2> getStartMarkers(std::string fileName)
+{
+    std::ifstream file;
+    file.open(fileName.c_str(),std::fstream::in);
+
+    std::vector<glm::vec2> startMarkers;
+    std::string line;
+    glm::vec2 currentPoint;
+    while (getline(file,line))
+    {
+        std::istringstream lineStream(line);
+        std::string current_int_string;
+        std::getline(lineStream,current_int_string,' ');
+        currentPoint[0] = std::stoi(current_int_string);
+        std::getline(lineStream,current_int_string,' ');
+        currentPoint[1] = std::stoi(current_int_string);
+        startMarkers.push_back(currentPoint);
+    }
+
+    return startMarkers;
 }
 
 //---------------------------------------------------------------

@@ -17,8 +17,46 @@ DeformationClean::DeformationClean(const std::vector<glm::vec2> &startSet, const
 
 //---------------------------------------------------------------
 
+DeformationClean::DeformationClean(const DeformationClean &d):
+    m_startMarkers(d.startMarkers()),
+    m_endMarkers(d.endMarkers())
+{
+
+}
+
+//---------------------------------------------------------------
+
 DeformationClean::~DeformationClean()
 {
+}
+
+//---------------------------------------------------------------
+
+std::vector <glm::vec2>& DeformationClean::startMarkers()
+{
+    return m_startMarkers;
+}
+
+//---------------------------------------------------------------
+
+std::vector <glm::vec2> DeformationClean::startMarkers() const
+{
+    return m_startMarkers;
+}
+
+
+//---------------------------------------------------------------
+
+std::vector <glm::vec2>& DeformationClean::endMarkers()
+{
+    return m_endMarkers;
+}
+
+//---------------------------------------------------------------
+
+std::vector <glm::vec2> DeformationClean::endMarkers() const
+{
+    return m_endMarkers;
 }
 
 //---------------------------------------------------------------
@@ -37,18 +75,22 @@ void DeformationClean::computeWeights(const glm::vec2 &p)
 void DeformationClean::computeCentroids(const glm::vec2 &p)
 {
     assert(m_startMarkers.size() == m_endMarkers.size());
-    computeWeights(p);
+//    computeWeights(p);
 
     // initializations
     double weightSum = 0.0;
     glm::vec2 zero(0.);
     m_startCentroid = zero;
     m_endCentroid = zero;
+
+    m_weights.clear();
+
     // sum
-    for (unsigned int i = 0 ; i < m_weights.size(); ++i)
+    for (unsigned int i = 0 ; i < m_startMarkers.size(); ++i)
     {
-        m_startCentroid =  m_startCentroid + (glm::vec2(m_weights.at(i)) * m_startMarkers[i]);
-        m_endCentroid = m_endCentroid + (glm::vec2(m_weights.at(i)) * m_endMarkers[i]);
+        m_weights.push_back(weight(p,m_startMarkers[i],1.0));
+        m_startCentroid =  m_startCentroid + (glm::vec2(m_weights[i]) * m_startMarkers[i]);
+        m_endCentroid = m_endCentroid + (glm::vec2(m_weights[i]) * m_endMarkers[i]);
         weightSum += m_weights[i];
     }
     m_startCentroid = m_startCentroid / glm::vec2(weightSum);
@@ -62,7 +104,6 @@ void DeformationClean::computeCentroidsDiff(const glm::vec2 &p)
     computeCentroids(p);
     m_diffStartCentroid = m_startMarkers;
     m_diffEndCentroid = m_endMarkers;
-
     for (unsigned int i = 0; i < m_startMarkers.size() ; ++i)
     {
         m_diffStartCentroid[i] = m_startMarkers[i]-m_startCentroid;
@@ -74,15 +115,21 @@ void DeformationClean::computeCentroidsDiff(const glm::vec2 &p)
 
 glm::mat2 DeformationClean::MatrixAffine(const glm::vec2 & p)
 {
-    computeCentroidsDiff(p);
+//    computeCentroidsDiff(p);
 
+    computeCentroids(p);
     glm::mat2 sumTmp1(0.);
     glm::mat2 sumTmp2(0.);
 
-
+    m_diffStartCentroid = m_startMarkers;
+    m_diffEndCentroid = m_endMarkers;
     glm::vec2 tmp(0.,0.);
     for (unsigned int i = 0 ; i < m_startMarkers.size(); ++i)
     {
+        // first compute centroïds Diff
+        m_diffStartCentroid[i] = m_startMarkers[i]-m_startCentroid;
+        m_diffEndCentroid[i] = m_endMarkers[i]-m_endCentroid;
+        // then compute sum
         tmp = glm::vec2(m_weights[i]) * m_diffStartCentroid[i];
         sumTmp1 += vec2Xvec2(m_diffStartCentroid[i],tmp);
         sumTmp2 += vec2Xvec2(tmp,m_diffEndCentroid[i]);
@@ -133,15 +180,15 @@ glm::vec2 DeformationClean::RigidDeformation(const glm::vec2 & p,bool print=fals
 {
     glm::mat2 def = MatrixRigid(p);
 
-    glm::vec2 tmp = p - m_startCentroid;
-    glm::vec2 res = tmp * def + m_endCentroid;
-    tmp = res;
+//    glm::vec2 tmp = ;
+    glm::vec2 res = (p - m_startCentroid ) * def + m_endCentroid;
+//    tmp = res;
     if (print)
     {
         std::cout << def[0][0] << "," << def[0][1] << std::endl;
         std::cout << def[1][0] << "," << def[1][1] << std::endl;
     }
-    return tmp;
+    return res;
 }
 
 //---------------------------------------------------------------
@@ -153,13 +200,14 @@ std::vector<glm::vec2> DeformationClean::AffineDeformationSet(const std::vector<
     std::vector<glm::vec2>::iterator begin = m_startMarkers.begin();
     std::vector<glm::vec2>::iterator end = m_startMarkers.end();
     std::vector<glm::vec2>::iterator tmp = m_startMarkers.end();
+    int index=0;
     for (unsigned int i = 0; i < size; ++i)
     {
         tmp = std::find(begin,end,pS[i]);
         if (tmp!=end)
         {
-//            std::cout << "here" << std::endl;
-            res[i] = *tmp;
+            index = tmp - begin;
+            res[i] = m_endMarkers[index];
         }
 //        else if (i == 1)
 //            res[i] = AffineDeformation(pS[i],true);
@@ -205,19 +253,28 @@ std::vector<glm::vec2> DeformationClean::RigidDeformationSet(const std::vector<g
     std::vector<glm::vec2>::iterator begin = m_startMarkers.begin();
     std::vector<glm::vec2>::iterator end = m_startMarkers.end();
     std::vector<glm::vec2>::iterator tmp = m_startMarkers.end();
+    int index=0;
+
+    std::clock_t start = std::clock();
+    double duration;
+
     for (unsigned int i = 0; i < size; ++i)
     {
         tmp = std::find(begin,end,pS[i]);
         if (tmp!=end)
         {
 //            std::cout << "here" << std::endl;
-            res[i] = *tmp;
+            index = tmp - begin;
+            res[i] = m_endMarkers[index];
         }
 //        else if (i == 1)
 //            res[i] = RigidDeformation(pS[i],true);
         else
             res[i] = RigidDeformation(pS[i]);
     }
+
+    duration = (std::clock() - start ) / (double) CLOCKS_PER_SEC;
+    std::cout << "duration : " << duration << std::endl;
 
     return res;
 }
@@ -288,8 +345,6 @@ glm::mat2 DeformationClean::MatrixRigid(const glm::vec2 & p)
     glm::mat2 tmp(0.);
     glm::mat2 tmp2(0.);
 
-    glm::vec2 pt_tmp;
-
     for (unsigned int i = 0; i < m_weights.size(); ++i )
     {
         tmp = zero;
@@ -310,6 +365,7 @@ glm::mat2 DeformationClean::MatrixRigid(const glm::vec2 & p)
         mat += tmp * tmp2;
     }
 
+
     mu_r1 *= mu_r1;
     mu_r2 *= mu_r2;
     mu_r = mu_r1 + mu_r2;
@@ -320,7 +376,4 @@ glm::mat2 DeformationClean::MatrixRigid(const glm::vec2 & p)
 }
 
 //---------------------------------------------------------------
-
-
-
 

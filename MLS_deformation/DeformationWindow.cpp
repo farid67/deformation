@@ -1,4 +1,5 @@
 #include "DeformationWindow.hpp"
+#include "DeformationFast.hpp"
 #include <QToolBar>
 #include <QWidget>
 
@@ -69,11 +70,11 @@ void DeformationWindow::render()
 //        }
 
         // test reading from file
-        image = m_colorMap->getImage();
-        unsigned int height = m_colorMap->getHeight(), width = m_colorMap->getWidth();
+//        image = m_colorMap->getImage();
+//        unsigned int height = m_colorMap->getHeight(), width = m_colorMap->getWidth();
 
 
-        int i,j;
+//        unsigned int i,j;
 
         // test Deformation set
 //        glm::vec2 middle(width/2,height/2),middle_2(width/2 + m_frame,height/2),tr(0,0),tl(width-1,0),br(0,height-1),bl(width-1,height-1);
@@ -106,29 +107,47 @@ void DeformationWindow::render()
 
 //        DeformationClean d (p,q);
 
-        DeformationClean d;
+//        DeformationClean d(m_startMarkers);
+
+//        if (m_frame < m_DeformationSet.size())
+//            m_deformation.setCurrentEndMarkers(m_DeformationSet[m_frame]);
+//        else
+//            m_deformation.setCurrentEndMarkers(*(m_DeformationSet.end()));
+
         if (m_frame < m_DeformationSet.size())
-            d = m_DeformationSet[m_frame];
+        {
+            m_deformation = m_DeformationSet[m_frame];
+            std::cout << "Set de points num " << m_frame << " with  " << m_deformation.startMarkers().size()  << " points" << std::endl;
+        }
         else
-            d = *(m_DeformationSet.end());
+        {
+            std::cout << "No more set of points"  << std::endl;
+            m_deformation = *(m_DeformationSet.rbegin());
+        }
+
 
         int deformation_grid_size = 5;
-        // Deformation set
-        std::vector <glm::vec2> points; // points to deform
-        for (i = 0; i < height; ++i)
-        {
-            for (j = 0; j < width; ++j)
-            {
-                if ((i%deformation_grid_size == 0) && (j%deformation_grid_size == 0))
-                    points.push_back(glm::vec2(j,i));
-            }
-        }
-        std::cout << points.size() << std::endl;
-        std::cout << "set created" << std::endl;
 
-        std::vector <glm::vec2> dest_points = d.RigidDeformationSet(points);
+//        // Deformation set
+//        std::vector <glm::vec2> points; // points to deform
+//        for (i = 0; i < height; ++i)
+//        {
+//            for (j = 0; j < width; ++j)
+//            {
+//                if ((i%deformation_grid_size == 0) && (j%deformation_grid_size == 0))
+//                    points.push_back(glm::vec2(j,i));
+//            }
+//        }
+//        std::cout << points.size() << std::endl;
+//        std::cout << "set created" << std::endl;
+
+        std::vector <glm::vec2> dest_points = m_deformation.RigidDeformationSet(m_gridPoints);
+//        std::vector <glm::vec2> dest_points = m_defoFast->AffineDeformationSet(m_deformation.startMarkers(),m_deformation.endMarkers());
+//        std::vector <glm::vec2> dest_points = points;
 
         std::cout << "deformation computed" << std::endl;
+        unsigned int height = 1080, width = 1920, i,j;
+        image= m_image;
 
         int compteur_tmp = 0;
         int line_short = (width-1)/deformation_grid_size;
@@ -534,7 +553,36 @@ void DeformationWindow::initialize()
 
 
     // creation of the deformation Sets
-    m_DeformationSet = getDeformationSetFromFile("../Ressources/shortMatches.txt");
+    m_DeformationSet = getDeformationSetFromFile("../Ressources/TrainingSet/matches_long.txt");
+    m_startMarkers = getStartMarkers("../Ressources/TrainingSet/descripteur_long.txt");
+
+//    m_deformation = DeformationClean(m_startMarkers);
+
+
+    int deformation_grid_size = 5;
+
+    m_image = m_colorMap->getImage();
+    unsigned int height = m_colorMap->getHeight(), width = m_colorMap->getWidth();
+
+
+    unsigned int i,j;
+
+    // Deformation set
+//    std::vector <glm::vec2> points; // points to deform
+
+    m_gridPoints.resize((height*width)/(deformation_grid_size*deformation_grid_size));
+    unsigned int compteur;
+    for (i = 0; i < height; ++i)
+    {
+        for (j = 0; j < width; ++j)
+        {
+            if ((i%deformation_grid_size == 0) && (j%deformation_grid_size == 0))
+                m_gridPoints[compteur++] = glm::vec2(j,i);
+        }
+    }
+
+
+//    m_defoFast = new DeformationFast(m_startMarkers,m_gridPoints);
 }
 
 //---------------------------------------------------------------
