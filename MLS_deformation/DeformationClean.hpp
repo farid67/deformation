@@ -130,7 +130,7 @@ inline std::vector<DeformationClean> getDeformationSetFromFile(std::string fileN
 
     std::vector < DeformationClean > defSets ;
     glm::vec2 a,b;
-    float distance_th = 200.;
+//    float distance_th = 300.;
     std::vector<glm::vec2> vecA,vecB;
     while (getline(file,line))
     {
@@ -153,20 +153,20 @@ inline std::vector<DeformationClean> getDeformationSetFromFile(std::string fileN
             b[0] = std::stoi(current_int_string);
             std::getline(lineStream,current_int_string,' ');
             b[1] = std::stoi(current_int_string);
-            if (glm::distance(a,b)>distance_th)
-                std::cout << "distance seems to be too high between (" << a[0] << "," << a[1] << ") and (" << b[0] << "," << b[1] << ")" << std::endl;
-            else
-            {
+//            if (glm::distance(a,b)>distance_th)
+//                std::cout << "distance seems to be too high between (" << a[0] << "," << a[1] << ") and (" << b[0] << "," << b[1] << ")" << std::endl;
+//            if(glm::distance(a,b)<=distance_th)
+//            {
                 // PUSH ELEMENTS iN ARRAYs
                 vecA.push_back(a);
                 vecB.push_back(b);
-            }
+//            }
         }
         // GET NEWLINE
         getline(file,line);
-        if (vecA.size() < 5 )
-            std::cout << "Can not add this set, not enough points" << std::endl;
-        else
+//        if (vecA.size() < 5 )
+//            std::cout << "Can not add this set, not enough points" << std::endl;
+//        if (vecA.size()>=5)
             defSets.push_back(DeformationClean(vecA,vecB));
     }
 
